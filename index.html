@@ -1,187 +1,164 @@
+
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Viaje</title>
-    <link rel="icon" href="./bus.png" type="image/x-icon">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
+    <title>Formulario de Registro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 160vh;
-            margin: 0;
+            margin: 20px;
         }
-        .container {
-            width: 100%;
-            max-width: 550px;
-            padding: 40px;
-            background-color: #fff;
-            border-radius: 25px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h2 {
-            text-align: center;
-            color: #333;
+        form {
+            margin-bottom: 20px;
         }
         label {
-            font-weight: bold;
-            margin-top: 10px;
             display: block;
+            margin: 5px 0;
         }
-        input, textarea {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+        input, button {
+            margin-bottom: 10px;
+            padding: 5px;
         }
-        button {
+        table {
+            border-collapse: collapse;
             width: 100%;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
             padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: #45a049;
+            text-align: left;
         }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <h2>Registro de Viaje</h2>
-    <br>
+    <h1>Formulario de Registro</h1>
     <form id="registroForm">
-        <label for="ruta">Ruta:</label>
-        <input type="text" id="ruta" name="ruta" required>
+        <label for="vale">Número de Vale:</label>
+        <input type="text" id="vale" required>
 
-        <label for="unidad">Unidad:</label>
-        <input type="text" id="unidad" name="unidad" required>
+        <label for="operador">Nombre del Operador:</label>
+        <input type="text" id="operador" required>
 
-        <label for="fecha">Fecha:</label>
-        <input type="date" id="fecha" name="fecha" required>
+        <label for="litros">Litros:</label>
+        <input type="number" id="litros" required>
 
-        <label for="inicio">Inicio:</label>
-        <input type="time" id="inicio" name="inicio" required>
+        <label for="costoUnitario">Costo Unitario:</label>
+        <input type="number" id="costoUnitario" step="0.01" required>
 
-        <label for="final">Final:</label>
-        <input type="time" id="final" name="final" required>
+        <label for="importe">Importe:</label>
+        <input type="number" id="importe" step="0.01" required>
 
-        <label for="num_pasajeros">Número de Pasajeros:</label>
-        <input type="number" id="num_pasajeros" name="num_pasajeros" min="0" required>
+        <label for="empresa">Empresa Asignada:</label>
+        <input type="text" id="empresa" required>
 
-        <label for="veces_limite">Veces que se superó el límite de velocidad:</label>
-        <input type="number" id="veces_limite" name="veces_limite" min="0" required>
+        <label for="gasolinera">Gasolinera:</label>
+        <input type="text" id="gasolinera" required>
 
-        <label for="descripcion_velocidad">Descripción de velocidad máxima:</label>
-        <textarea id="descripcion_velocidad" name="descripcion_velocidad" rows="3"></textarea>
-
-        <label for="lista_pasajeros">Lista de pasajeros que subieron:</label>
-        <textarea id="lista_pasajeros" name="lista_pasajeros" rows="5" placeholder="Ingresa los ID de los pasajeros" required></textarea>
-
-        <button type="button" onclick="generatePDF()">Generar PDF</button>
+        <button type="button" onclick="guardarDatos()">Guardar</button>
+        <button type="button" onclick="descargarExcel()">Descargar</button>
     </form>
-</div>
 
-<script>
-    function generatePDF() {
-        // Verificar que todos los campos requeridos estén completos
-        const form = document.getElementById('registroForm');
-        if (!form.checkValidity()) {
-            alert('Por favor, complete todos los campos obligatorios.');
-            return;
-        }
+    <table id="datosTabla">
+        <thead>
+            <tr>
+                <th>Número de Vale</th>
+                <th>Nombre del Operador</th>
+                <th>Litros</th>
+                <th>Costo Unitario</th>
+                <th>Importe</th>
+                <th>Empresa Asignada</th>
+                <th>Gasolinera</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+    <script>
+        const datos = [];
 
-        // Recopilamos los datos del formulario
-        const ruta = document.getElementById('ruta').value;
-        const unidad = document.getElementById('unidad').value;
-        let fecha = document.getElementById('fecha').value;
+        function guardarDatos() {
+            const vale = document.getElementById("vale").value;
+            const operador = document.getElementById("operador").value;
+            const litros = parseFloat(document.getElementById("litros").value);
+            const costoUnitario = parseFloat(document.getElementById("costoUnitario").value);
+            const importe = parseFloat(document.getElementById("importe").value);
+            const empresa = document.getElementById("empresa").value;
+            const gasolinera = document.getElementById("gasolinera").value;
 
-        // Formateamos la fecha reemplazando "/" por "-"
-        fecha = fecha.replace(/\//g, "-");
+            if (vale && operador && litros && costoUnitario && importe && empresa && gasolinera) {
+                const nuevoRegistro = { 
+                    vale, 
+                    operador, 
+                    litros, 
+                    costoUnitario, 
+                    importe, 
+                    empresa, 
+                    gasolinera 
+                };
+                datos.push(nuevoRegistro);
 
-        const inicio = document.getElementById('inicio').value;
-        const final = document.getElementById('final').value;
-        const numPasajeros = document.getElementById('num_pasajeros').value;
-        const vecesLimite = parseInt(document.getElementById('veces_limite').value);
-        const descripcionVelocidad = document.getElementById('descripcion_velocidad').value;
-        const listaPasajeros = document.getElementById('lista_pasajeros').value;
-
-        // Determinamos el nivel de conducción basado en las veces que se superó el límite de velocidad
-        let nivelConduccion;
-        if (vecesLimite === 0) {
-            nivelConduccion = "Excelente";
-        } else if (vecesLimite === 1) {
-            nivelConduccion = "Muy bueno";
-        } else if (vecesLimite === 2) {
-            nivelConduccion = "Bueno";
-        } else if (vecesLimite === 3) {
-            nivelConduccion = "Regular";
-        } else {
-            nivelConduccion = "Deficiente";
-        }
-
-        // Configuramos el título del PDF dinámicamente
-        const tituloPDF = `Fecha: ${fecha} | Unidad: ${unidad} | Ruta: ${ruta}`;
-        doc.setFontSize(16);
-        doc.text(tituloPDF, 20, 20);
-
-        // Definimos el contenido de la tabla
-        const tableData = [
-            ["Ruta", ruta],
-            ["Unidad", unidad],
-            ["Fecha", fecha],
-            ["Inicio", inicio],
-            ["Final", final],
-            ["Número de Pasajeros", numPasajeros],
-            ["Veces que se superó el límite de velocidad", vecesLimite],
-            ["Descripción de Velocidad Máxima", descripcionVelocidad],
-            ["Lista de Pasajeros", listaPasajeros],
-            ["Nivel de Conducción", nivelConduccion]
-        ];
-
-        // Generamos la tabla en el PDF usando autoTable
-        doc.autoTable({
-            head: [["Campo", "Valor"]],
-            body: tableData,
-            startY: 30,
-            theme: 'striped',
-            styles: {
-                cellPadding: 3,
-                fontSize: 10,
-                valign: 'middle',
-                overflow: 'linebreak'
-            },
-            headStyles: {
-                fillColor: [22, 160, 133],
-                textColor: [255, 255, 255]
+                agregarFilaTabla(nuevoRegistro);
+                document.getElementById("registroForm").reset();
+            } else {
+                alert("Por favor, llena todos los campos.");
             }
-        });
+        }
 
-        // Configuramos el nombre del archivo usando Fecha, Ruta y Unidad
-        const fileName = `${fecha}-${ruta}-${unidad}.pdf`;
+        function agregarFilaTabla(registro) {
+            const tabla = document.getElementById("datosTabla").getElementsByTagName("tbody")[0];
+            const fila = tabla.insertRow();
 
-        // Guardamos el PDF con el nombre dinámico
-        doc.save(fileName);
-    }
-</script>
+            Object.values(registro).forEach(valor => {
+                const celda = fila.insertCell();
+                celda.textContent = valor;
+            });
+        }
 
+        function descargarExcel() {
+            if (datos.length === 0) {
+                alert("No hay datos para descargar.");
+                return;
+            }
+
+            // Preparar datos para Excel con la columna de Costo Total
+            const datosExcel = datos.map(registro => ({
+                "Número de Vale": registro.vale,
+                "Nombre del Operador": registro.operador,
+                "Litros": registro.litros,
+                "Costo Unitario": registro.costoUnitario,
+                "Importe": registro.importe,
+                "Empresa Asignada": registro.empresa,
+                "Gasolinera": registro.gasolinera,
+                "Costo Total": registro.litros * registro.costoUnitario // Nueva columna calculada
+            }));
+
+            // Calcular la suma total
+            const sumaTotal = datosExcel.reduce((sum, registro) => sum + registro["Costo Total"], 0);
+
+            // Agregar fila de "Suma Total"
+            datosExcel.push({
+                "Número de Vale": "",
+                "Nombre del Operador": "",
+                "Litros": "",
+                "Costo Unitario": "",
+                "Importe": "",
+                "Empresa Asignada": "",
+                "Gasolinera": "Suma Total",
+                "Costo Total": sumaTotal
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(datosExcel);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Registros");
+
+            XLSX.writeFile(workbook, "Registros.xlsx");
+        }
+    </script>
 </body>
 </html>
-
-
-
