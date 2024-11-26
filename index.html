@@ -1,10 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulario de Registro</title>
-    <link rel="icon" href="./sheets.png" type="image/x-icon">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
@@ -76,7 +76,8 @@
     </table>
 
     <script>
-        const datos = [];
+        // Recuperar datos del LocalStorage al cargar la página
+        let datos = JSON.parse(localStorage.getItem("datos")) || [];
 
         function guardarDatos() {
             const vale = document.getElementById("vale").value;
@@ -97,6 +98,7 @@
                 };
                 datos.push(nuevoRegistro);
 
+                actualizarLocalStorage();
                 agregarFilaTabla(nuevoRegistro);
                 document.getElementById("registroForm").reset();
             } else {
@@ -112,6 +114,10 @@
                 const celda = fila.insertCell();
                 celda.textContent = valor;
             });
+        }
+
+        function actualizarLocalStorage() {
+            localStorage.setItem("datos", JSON.stringify(datos));
         }
 
         function descargarExcel() {
@@ -193,7 +199,24 @@
             XLSX.utils.book_append_sheet(workbook, worksheet3, "Total Gasolinera");
 
             XLSX.writeFile(workbook, "Registros.xlsx");
+
+            // Limpiar datos después de descargar
+            datos = [];
+            actualizarLocalStorage();
+            limpiarTabla();
         }
+
+        function limpiarTabla() {
+            const tabla = document.getElementById("datosTabla").getElementsByTagName("tbody")[0];
+            while (tabla.rows.length > 0) {
+                tabla.deleteRow(0);
+            }
+        }
+
+        // Al cargar la página, restaurar datos en la tabla
+        window.onload = function () {
+            datos.forEach(registro => agregarFilaTabla(registro));
+        };
     </script>
 </body>
 </html>
