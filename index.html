@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,9 +50,6 @@
         <label for="costoUnitario">Costo Unitario:</label>
         <input type="number" id="costoUnitario" step="0.01" required>
 
-        <label for="importe">Importe:</label>
-        <input type="number" id="importe" step="0.01" required>
-
         <label for="empresa">Empresa Asignada:</label>
         <input type="text" id="empresa" required>
 
@@ -71,7 +67,6 @@
                 <th>Nombre del Operador</th>
                 <th>Litros</th>
                 <th>Costo Unitario</th>
-                <th>Importe</th>
                 <th>Empresa Asignada</th>
                 <th>Gasolinera</th>
             </tr>
@@ -87,17 +82,15 @@
             const operador = document.getElementById("operador").value;
             const litros = parseFloat(document.getElementById("litros").value);
             const costoUnitario = parseFloat(document.getElementById("costoUnitario").value);
-            const importe = parseFloat(document.getElementById("importe").value);
             const empresa = document.getElementById("empresa").value;
             const gasolinera = document.getElementById("gasolinera").value;
 
-            if (vale && operador && litros && costoUnitario && importe && empresa && gasolinera) {
+            if (vale && operador && litros && costoUnitario && empresa && gasolinera) {
                 const nuevoRegistro = { 
                     vale, 
                     operador, 
                     litros, 
                     costoUnitario, 
-                    importe, 
                     empresa, 
                     gasolinera 
                 };
@@ -126,20 +119,19 @@
                 return;
             }
 
-            // Preparar datos para Excel con la columna de Costo Total
+            // Preparar datos para la hoja principal
             const datosExcel = datos.map(registro => ({
                 "Número de Vale": registro.vale,
                 "Nombre del Operador": registro.operador,
                 "Litros": registro.litros,
                 "Costo Unitario": registro.costoUnitario,
-                "Importe": registro.importe,
                 "Empresa Asignada": registro.empresa,
                 "Gasolinera": registro.gasolinera,
-                "Costo Total": registro.litros * registro.costoUnitario // Nueva columna calculada
+                "Importe": registro.litros * registro.costoUnitario
             }));
 
-            // Calcular la suma total
-            const sumaTotal = datosExcel.reduce((sum, registro) => sum + registro["Costo Total"], 0);
+            // Calcular la suma total de la columna "Importe"
+            const sumaTotal = datosExcel.reduce((sum, registro) => sum + registro["Importe"], 0);
 
             // Agregar fila de "Suma Total"
             datosExcel.push({
@@ -147,15 +139,57 @@
                 "Nombre del Operador": "",
                 "Litros": "",
                 "Costo Unitario": "",
-                "Importe": "",
                 "Empresa Asignada": "",
                 "Gasolinera": "Suma Total",
-                "Costo Total": sumaTotal
+                "Importe": sumaTotal
             });
 
-            const worksheet = XLSX.utils.json_to_sheet(datosExcel);
+            // Agrupar por empresa para la hoja "Total Empresa"
+            const totalEmpresa = datosExcel.reduce((acc, registro) => {
+                if (registro["Empresa Asignada"]) {
+                    const empresa = registro["Empresa Asignada"];
+                    const importe = registro["Importe"] || 0;
+                    if (!acc[empresa]) {
+                        acc[empresa] = 0;
+                    }
+                    acc[empresa] += importe;
+                }
+                return acc;
+            }, {});
+
+            const totalEmpresaArray = Object.keys(totalEmpresa).map(empresa => ({
+                "Nombre de la Empresa": empresa,
+                "Costo Total": totalEmpresa[empresa]
+            }));
+
+            // Agrupar por gasolinera para la hoja "Total Gasolinera"
+            const totalGasolinera = datosExcel.reduce((acc, registro) => {
+                if (registro["Gasolinera"]) {
+                    const gasolinera = registro["Gasolinera"];
+                    const importe = registro["Importe"] || 0;
+                    if (!acc[gasolinera]) {
+                        acc[gasolinera] = 0;
+                    }
+                    acc[gasolinera] += importe;
+                }
+                return acc;
+            }, {});
+
+            const totalGasolineraArray = Object.keys(totalGasolinera).map(gasolinera => ({
+                "Nombre de la Gasolinera": gasolinera,
+                "Costo Total": totalGasolinera[gasolinera]
+            }));
+
+            // Crear hojas de Excel
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Registros");
+            const worksheet1 = XLSX.utils.json_to_sheet(datosExcel);
+            XLSX.utils.book_append_sheet(workbook, worksheet1, "Registros");
+
+            const worksheet2 = XLSX.utils.json_to_sheet(totalEmpresaArray);
+            XLSX.utils.book_append_sheet(workbook, worksheet2, "Total Empresa");
+
+            const worksheet3 = XLSX.utils.json_to_sheet(totalGasolineraArray);
+            XLSX.utils.book_append_sheet(workbook, worksheet3, "Total Gasolinera");
 
             XLSX.writeFile(workbook, "Registros.xlsx");
         }
